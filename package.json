@@ -1,0 +1,28 @@
+{
+  "name": "clauding",
+  "version": "0.1.0",
+  "description": "Run Claude Code against a local or self-hosted Messages API.",
+  "type": "module",
+  "bin": {
+    "clauding": "bin/clauding.js"
+  },
+  "files": [
+    "bin",
+    "docs"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hikaMaeng/clauding.git"
+  },
+  "keywords": [
+    "cli",
+    "claude-code",
+    "lm-studio",
+    "mcp",
+    "local-llm"
+  ]
+}

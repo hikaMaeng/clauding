@@ -1,0 +1,47 @@
+Run Claude Code against a local or self-hosted Anthropic-compatible Messages API.
+
+# Clauding
+
+Choose a server and model once, then run `clauding` in any project. Clauding starts your existing Claude Code installation with that model, an optional context window, and an optional MCP config scoped to the launcher.
+
+## Install
+
+Install Node.js 22 or newer and put the [official Claude Code CLI](https://code.claude.com/docs/en/setup) on your PATH. Git needs access to this repository.
+
+```sh
+npm install --global "git+https://github.com/hikaMaeng/clauding.git#v0.1.0"
+```
+
+## Quick start
+
+Start an [LM Studio server](https://lmstudio.ai/docs/integrations/claude-code) or another Anthropic-compatible server. Use the model ID advertised by that server.
+
+```sh
+clauding --init http://127.0.0.1:1234 openai/gpt-oss-20b
+clauding
+clauding "./my project"
+```
+
+On Windows, `clauding "F:\dev\my project"` opens a specified folder. `clauding --init` keeps an existing configuration.
+
+Edit `~/.clauding/config.json` to change the endpoint or model. Set `contextTokens` to the server's actual context window if Claude Code assumes a different size.
+
+```json
+{
+  "baseUrl": "http://127.0.0.1:1234",
+  "model": "my-local-model",
+  "contextTokens": 65536
+}
+```
+
+For launch-only tools such as a web search server, add `~/.clauding/mcp.json`. See the [MCP example](docs/usage.md#add-mcp-tools) for a portable template.
+
+| Goal | File |
+| --- | --- |
+| Understand the purpose | [Overview](docs/overview.md) |
+| Install and configure | [Usage](docs/usage.md) |
+| Look up CLI and config keys | [API](docs/api.md) |
+| Understand the launch path | [Architecture](docs/architecture.md) |
+| Check provider and platform constraints | [Constraints](docs/constraints.md) |
+| Troubleshoot executable resolution | [Internals](docs/internals.md) |
+| Verify a build or installation | [Testing](docs/testing.md) |
