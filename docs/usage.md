@@ -4,6 +4,38 @@ Run `clauding --init <base-url> <model-id>` once, then use `clauding` in the des
 
 The config folder is `%USERPROFILE%\.clauding` on Windows and `$HOME/.clauding` on macOS and Linux. Start a new session after changing either JSON file.
 
+## Choose between models
+
+The original single-object config remains supported. To keep multiple endpoints or models, wrap those same objects in a `models` array.
+
+```json
+{
+  "models": [
+    {
+      "baseUrl": "http://127.0.0.1:1234",
+      "model": "model-a",
+      "contextTokens": 65536
+    },
+    {
+      "baseUrl": "http://127.0.0.1:5678",
+      "model": "model-b",
+      "contextTokens": 131072,
+      "authToken": "your-server-token"
+    }
+  ]
+}
+```
+
+Run `clauding` and enter an index at the prompt, or select explicitly.
+
+```sh
+clauding --select-model 2
+clauding --select-model model-a "./my project"
+clauding --select-model 2 -- -p "Explain this project"
+```
+
+Each launch uses the selected entry's URL, credentials, and context size. Re-run Clauding to choose another entry. The picker shows model IDs and endpoints while omitting token fields, URL credentials, query strings, and fragments. Model selection leaves the JSON file as written.
+
 ## Add MCP tools
 
 Save a standard Claude Code MCP config as `~/.clauding/mcp.json`. Clauding adds these tools to its sessions alongside Claude Code's existing MCP configuration. Run `/mcp` in the session to inspect the connection.

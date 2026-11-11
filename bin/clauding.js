@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { constants, homedir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
+import { selectModel, validateConfig } from '../lib/models.js';
 
 const configDir = join(homedir(), '.clauding');
 const configPath = join(configDir, 'config.json');
@@ -18,24 +19,6 @@ function readJson(file) {
   }
 }
 
-/** Validate the values used to launch the child process. */
-function validateConfig(config) {
-  const baseUrl = typeof config?.baseUrl === 'string' ? config.baseUrl.trim() : '';
-  if (!URL.canParse(baseUrl) || !['http:', 'https:'].includes(new URL(baseUrl).protocol)) {
-    throw new Error(`Set baseUrl to an absolute HTTP or HTTPS URL in ${configPath}`);
-  }
-  if (typeof config.model !== 'string' || !config.model.trim()) {
-    throw new Error(`Set model to a non-empty model ID in ${configPath}`);
-  }
-  if (config.contextTokens != null &&
-      (!Number.isSafeInteger(config.contextTokens) || config.contextTokens < 1)) {
-    throw new Error(`Set contextTokens to a positive integer in ${configPath}`);
-  }
-  if (config.authToken != null && typeof config.authToken !== 'string') {
-    throw new Error(`Set authToken to a string in ${configPath}`);
-  }
-}
-
 /** Create a user config once, leaving an existing config intact. */
 function initConfig(args) {
   if (args.length !== 0 && args.length !== 2) {
@@ -43,7 +26,7 @@ function initConfig(args) {
   }
   const [baseUrl = 'http://127.0.0.1:1234', model = 'openai/gpt-oss-20b'] = args;
   const config = { baseUrl, model };
-  validateConfig(config);
+  validateConfig(config, configPath);
   mkdirSync(configDir, { recursive: true });
   try {
     writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', {
@@ -114,9 +97,9 @@ function makeEnvironment(config) {
 }
 
 /** Start the CLI with the selected working directory and inherited terminal. */
-function main(args) {
+async function main(args) {
   if (args[0] === '--help' || args[0] === '-h') {
-    console.log(`Usage: clauding [folder] [--] [Claude Code options]
+    console.log(`Usage: clauding [--select-model <index|model-id>] [folder] [--] [Claude Code options]
        clauding --init [base-url model-id]
 
 Config: ${configPath}
@@ -128,17 +111,23 @@ Claude Code help: clauding -- --help`);
     initConfig(args.slice(1));
     return;
   }
+  let selector;
+  if (args[0] === '--select-model') {
+    selector = args[1];
+    if (!selector || selector.startsWith('-')) {
+      throw new Error('Usage: clauding --select-model <index|model-id> [folder] [Claude Code options]');
+    }
+    args = args.slice(2);
+  }
   if (!existsSync(configPath)) {
     throw new Error(`Configuration not found: ${configPath}. Run clauding --init first.`);
   }
-  const config = readJson(configPath);
-  validateConfig(config);
-
   const hasFolder = args.length > 0 && !args[0].startsWith('-');
   const cwd = hasFolder ? resolve(args[0]) : process.cwd();
   if (!statSync(cwd, { throwIfNoEntry: false })?.isDirectory()) {
     throw new Error(`Folder not found: ${cwd}`);
   }
+  const config = await selectModel(readJson(configPath), configPath, selector);
   const remaining = args.slice(hasFolder ? 1 : 0);
   const passthrough = remaining[0] === '--' ? remaining.slice(1) : remaining;
   const mcp = existsSync(mcpPath) ? ['--mcp-config', mcpPath] : [];
@@ -162,7 +151,7 @@ function fail(message) {
 }
 
 try {
-  main(process.argv.slice(2));
+  await main(process.argv.slice(2));
 } catch (error) {
   fail(error.message);
 }

@@ -1,6 +1,6 @@
 {
   "name": "clauding",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Run Claude Code against a local or self-hosted Messages API.",
   "type": "module",
   "bin": {
@@ -8,8 +8,12 @@
   },
   "files": [
     "bin",
+    "lib",
     "docs"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
   "engines": {
     "node": ">=22"
   },

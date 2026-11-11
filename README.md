@@ -2,14 +2,14 @@ Run Claude Code against a local or self-hosted Anthropic-compatible Messages API
 
 # Clauding
 
-Choose a server and model once, then run `clauding` in any project. Clauding starts your existing Claude Code installation with that model, an optional context window, and an optional MCP config scoped to the launcher.
+Configure one model or a list, then run `clauding` in any project. Clauding starts your existing Claude Code installation with the selected endpoint, model, optional context window, and optional MCP config scoped to the launcher.
 
 ## Install
 
 Install Node.js 22 or newer and put the [official Claude Code CLI](https://code.claude.com/docs/en/setup) on your PATH. Git needs access to this repository.
 
 ```sh
-npm install --global "git+https://github.com/hikaMaeng/clauding.git#v0.1.0"
+npm install --global "git+https://github.com/hikaMaeng/clauding.git#v0.2.0"
 ```
 
 ## Quick start
@@ -35,6 +35,8 @@ Edit `~/.clauding/config.json` to change the endpoint or model. Set `contextToke
 ```
 
 For launch-only tools such as a web search server, add `~/.clauding/mcp.json`. See the [MCP example](docs/usage.md#add-mcp-tools) for a portable template.
+
+To keep several models, wrap the same config objects in `{"models":[...]}`. `clauding` prompts for a model when the list has multiple entries. Use `clauding --select-model 2` to select an entry directly. [Model list example](docs/usage.md#choose-between-models)
 
 | Goal | File |
 | --- | --- |

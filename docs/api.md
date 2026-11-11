@@ -4,6 +4,7 @@
 | --- | --- |
 | `clauding` | Open the current folder. |
 | `clauding "<folder>"` | Open the specified folder. |
+| `clauding --select-model <index\|model-id> [folder]` | Select a configured model by its 1-based index or unique model ID. |
 | `clauding "<folder>" -- --version` | Forward Claude Code arguments for that folder. |
 | `clauding --init [base-url model-id]` | Create `~/.clauding/config.json` if absent. |
 | `clauding --help` | Show launcher help. |
@@ -11,11 +12,15 @@
 
 An initial argument without a leading hyphen is a folder. Use `./-name` (or `.\-name` on Windows) for a folder whose name starts with a hyphen. The Claude Code child process receives the remaining arguments.
 
+Place `--select-model` before the folder and Claude Code arguments. A numeric selection is always a 1-based index. If several entries have the same model ID, use their indices. Arguments after `--` go directly to Claude Code.
+
 | `config.json` key | Value |
 | --- | --- |
 | `baseUrl` | Required HTTP(S) API base URL, such as `http://127.0.0.1:1234`. Use the base before `/v1/messages`. |
 | `model` | Required model ID served by that API. |
 | `contextTokens` | Optional positive integer. Used for Claude Code's context estimate. |
 | `authToken` | Optional bearer token. The default `lmstudio` value is suitable for an LM Studio endpoint with authentication disabled. |
+
+The root object may instead contain `models`, a non-empty array of objects with the same keys above. Every entry is validated before selection. With one entry, Clauding starts it directly. Multiple entries prompt in a terminal, with Enter selecting the first entry. Non-interactive runs require `--select-model`. Invalid input, EOF, or Ctrl+C ends selection before Claude Code starts.
 
 If `~/.clauding/mcp.json` exists, it is passed as a Claude Code `--mcp-config` file. Its top-level key is `mcpServers`.
