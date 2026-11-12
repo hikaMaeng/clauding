@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { constants, homedir } from 'node:os';
+import { homedir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { selectModel, validateConfig } from '../lib/models.js';
+import { assertEndpointCompatible, normalizeEndpoint } from '../lib/endpoint.js';
+import { superviseChild } from '../lib/lifecycle.js';
 
 const configDir = join(homedir(), '.clauding');
 const configPath = join(configDir, 'config.json');
@@ -72,7 +74,7 @@ function findClaude() {
 /** Apply launcher overrides only to the Claude Code subprocess. */
 function makeEnvironment(config) {
   const settings = {
-    ANTHROPIC_BASE_URL: config.baseUrl.trim().replace(/\/+$/, ''),
+    ANTHROPIC_BASE_URL: normalizeEndpoint(config.baseUrl),
     ANTHROPIC_AUTH_TOKEN: config.authToken?.trim() || 'lmstudio',
     ANTHROPIC_API_KEY: null,
     ANTHROPIC_CUSTOM_HEADERS: null,
@@ -130,6 +132,7 @@ Claude Code help: clauding -- --help`);
   const config = await selectModel(readJson(configPath), configPath, selector);
   const remaining = args.slice(hasFolder ? 1 : 0);
   const passthrough = remaining[0] === '--' ? remaining.slice(1) : remaining;
+  assertEndpointCompatible({ baseUrl: config.baseUrl, cwd, args: passthrough });
   const mcp = existsSync(mcpPath) ? ['--mcp-config', mcpPath] : [];
   const { command, prefix } = findClaude();
   const child = spawn(command, [...prefix, ...mcp, '--model', config.model.trim(), ...passthrough], {
@@ -137,12 +140,11 @@ Claude Code help: clauding -- --help`);
     env: makeEnvironment(config),
     stdio: 'inherit',
   });
-  child.once('error', (error) => {
-    fail(error.code === 'ENOENT' ? 'Claude Code was not found on PATH.' : error.message);
-  });
-  child.once('exit', (code, signal) => {
-    process.exitCode = code ?? 128 + (constants.signals[signal] ?? 1);
-  });
+  try {
+    process.exitCode = await superviseChild(child);
+  } catch (error) {
+    throw new Error(error.code === 'ENOENT' ? 'Claude Code was not found on PATH.' : error.message);
+  }
 }
 
 function fail(message) {

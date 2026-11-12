@@ -30,13 +30,14 @@ function fixture(t) {
     writeFileSync(join(bin, 'claude'), '#!/usr/bin/env node\n' + source);
     chmodSync(join(bin, 'claude'), 0o755);
   }
-  const env = { ...process.env, HOME: home, USERPROFILE: home, ANTHROPIC_API_KEY: 'inherited-secret' };
+  const env = { ...process.env, HOME: home, USERPROFILE: home, ProgramFiles: join(root, 'program-files'), ANTHROPIC_API_KEY: 'inherited-secret' };
   for (const key of Object.keys(env)) {
-    if (['PATH', 'CLAUDE_CODE_MAX_CONTEXT_TOKENS', 'ANTHROPIC_MODEL'].includes(key.toUpperCase())) delete env[key];
+    if (['PATH', 'CLAUDE_CODE_MAX_CONTEXT_TOKENS', 'CLAUDE_CONFIG_DIR', 'ANTHROPIC_MODEL', 'ANTHROPIC_BASE_URL'].includes(key.toUpperCase())) delete env[key];
   }
   env.PATH = [bin, dirname(process.execPath)].join(process.platform === 'win32' ? ';' : ':');
   const configPath = join(configDir, 'config.json');
   return {
+    env,
     project,
     configPath,
     mcp: join(configDir, 'mcp.json'),
@@ -56,6 +57,19 @@ test('legacy BOM config preserves cwd, MCP, literal arguments, and child exit co
     args: ['--mcp-config', f.mcp, '--model', 'legacy', '-p', literal],
     cwd: f.project, url: 'http://localhost:1234', model: null, token: 'lmstudio', context: '65536', key: null,
   });
+});
+
+test('endpoint conflicts abort before the Claude child is started', (t) => {
+  const f = fixture(t);
+  f.config({ baseUrl: 'http://localhost:1234', model: 'guarded' });
+  f.env.ANTHROPIC_BASE_URL = 'http://private:secret@different/?token=never-print';
+  const conflict = f.run('--version');
+  assert.equal(conflict.status, 1);
+  assert.equal(conflict.stdout, '');
+  assert.match(conflict.stderr, /ANTHROPIC_BASE_URL.*process environment/);
+  assert.equal(conflict.stderr.includes('never-print'), false);
+  f.env.ANTHROPIC_BASE_URL = 'http://localhost:1234/';
+  assert.equal(f.run('--version').status, 23);
 });
 
 test('selected list item supplies its own URL, token and context', (t) => {
