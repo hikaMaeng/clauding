@@ -72,6 +72,17 @@ test('endpoint conflicts abort before the Claude child is started', (t) => {
   assert.equal(f.run('--version').status, 23);
 });
 
+test('prompt option values that resemble settings flags are forwarded literally', (t) => {
+  const f = fixture(t);
+  f.config({ baseUrl: 'http://localhost:1234', model: 'guarded' });
+  const literal = '--settings={"env":{"ANTHROPIC_BASE_URL":"http://different"}}';
+  for (const flag of ['--append-system-prompt', '--system-prompt']) {
+    const result = f.run(flag, literal, '--version');
+    assert.equal(result.status, 23, result.stderr);
+    assert.deepEqual(JSON.parse(result.stdout).args, ['--model', 'guarded', flag, literal, '--version']);
+  }
+});
+
 test('selected list item supplies its own URL, token and context', (t) => {
   const f = fixture(t);
   f.config({ models: [

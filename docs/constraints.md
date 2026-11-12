@@ -7,9 +7,11 @@
 
 ## Endpoint checks
 
-Before launching Claude Code, Clauding compares the selected URL with `ANTHROPIC_BASE_URL` in the process environment and enabled local settings. It checks the user settings directory (including `CLAUDE_CONFIG_DIR`), project and local settings in the working directory and nearest Git root, explicit `--settings` files or inline JSON, and local `managed-settings.json` plus `managed-settings.d/*.json`.
+Before launching Claude Code, Clauding compares the selected URL with `ANTHROPIC_BASE_URL` in the process environment and enabled local settings. It checks the user settings directory (including `CLAUDE_CONFIG_DIR`), shared project settings in the working directory, explicit `--settings` files or inline JSON, and local `managed-settings.json` plus non-hidden `managed-settings.d/*.json`.
 
-`--setting-sources` controls user, project, and local inspection. Explicit and local managed files are checked separately. Every discovered declaration must match the selection, even when a higher-precedence declaration would override it. URL path trailing slashes are equivalent. Malformed relevant settings fail before launch, and errors name the variable and source without printing endpoint or credential values.
+On Windows, local settings also come from the working directory. On POSIX, Git identifies the main checkout root for local settings, including linked worktrees. The working directory is used outside Git, when that root is the user's home, or when the root or its `.git`/`.claude` entries have another owner. Legacy local files in the working directory are also checked. Git discovery failure falls back to the working directory. [Local settings location](https://code.claude.com/docs/en/settings#where-claude-code-keeps-the-local-file-in-a-git-repository)
+
+`--setting-sources` controls user, project, and local inspection. Explicit and local managed files are checked separately. Every discovered declaration must match the selection, even when a higher-precedence declaration would override it. The argument inspector skips values for known Claude Code options, preserving literal prompt text that resembles settings flags. URL path trailing slashes are equivalent. Malformed relevant settings fail before launch, and errors name the variable and source without printing endpoint or credential values.
 
 This preflight is a snapshot of local files. Claude Code also supports dynamic server-managed settings, registry or MDM policy, and runtime reloads. Those sources and changes after the check are outside the preflight. Claude Code remains responsible for its final settings resolution. [Settings sources](https://code.claude.com/docs/en/settings)
 
