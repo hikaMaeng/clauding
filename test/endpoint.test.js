@@ -98,6 +98,20 @@ test('restricted mode preserves process, explicit and managed endpoint checks', 
   assert.throws(() => assertEndpointCompatible(options), /managed-settings.json/);
 });
 
+test('restricted environment mode recognizes truthy forms and keeps a false-value control', (t) => {
+  const { options, put, conflict } = fixture(t);
+  put(join(options.home, '.claude', 'settings.json'), conflict);
+  for (const value of ['1', 'true', 'YES', ' On ']) {
+    options.env.CLAUDE_CODE_RESTRICTED = value;
+    assert.doesNotThrow(() => assertEndpointCompatible(options));
+  }
+  options.env.CLAUDE_CODE_RESTRICTED = '0';
+  assert.throws(() => assertEndpointCompatible(options), /conflicts/);
+  options.env.CLAUDE_CODE_RESTRICTED = '1';
+  options.args = ['--settings', JSON.stringify(conflict)];
+  assert.throws(() => assertEndpointCompatible(options), /--settings inline JSON/);
+});
+
 test('custom user config directory is inspected', (t) => {
   const { options, put, conflict } = fixture(t);
   options.env.CLAUDE_CONFIG_DIR = join(options.home, 'custom');
