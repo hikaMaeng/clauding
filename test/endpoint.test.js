@@ -71,6 +71,33 @@ test('user, project and local settings are checked when enabled', (t) => {
   assert.doesNotThrow(() => assertEndpointCompatible(options));
 });
 
+test('restricted mode suppresses user, project and local files regardless of option order', (t) => {
+  const { options, put, conflict } = fixture(t);
+  put(join(options.home, '.claude', 'settings.json'), conflict);
+  put(join(options.cwd, '.claude', 'settings.json'), conflict);
+  put(join(options.cwd, '.claude', 'settings.local.json'), conflict);
+  for (const args of [['--restricted'], ['--restricted', '--setting-sources=user,project,local'],
+    ['--setting-sources=user,project,local', '--restricted']]) {
+    options.args = args;
+    assert.doesNotThrow(() => assertEndpointCompatible(options));
+  }
+  options.args = ['--append-system-prompt', '--restricted'];
+  assert.throws(() => assertEndpointCompatible(options), /conflicts/);
+});
+
+test('restricted mode preserves process, explicit and managed endpoint checks', (t) => {
+  const { options, put, conflict } = fixture(t);
+  options.args = ['--restricted'];
+  options.env = conflict.env;
+  assert.throws(() => assertEndpointCompatible(options), /process environment/);
+  options.env = {};
+  options.args = ['--restricted', '--settings', JSON.stringify(conflict)];
+  assert.throws(() => assertEndpointCompatible(options), /--settings inline JSON/);
+  options.args = ['--restricted'];
+  put(join(options.managedDir, 'managed-settings.json'), conflict);
+  assert.throws(() => assertEndpointCompatible(options), /managed-settings.json/);
+});
+
 test('custom user config directory is inspected', (t) => {
   const { options, put, conflict } = fixture(t);
   options.env.CLAUDE_CONFIG_DIR = join(options.home, 'custom');
