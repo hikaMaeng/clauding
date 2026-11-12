@@ -188,13 +188,56 @@ test('explicit file, inline JSON and equals settings forms are inspected', (t) =
 test('required option values are not reinterpreted as settings flags', (t) => {
   const { options, conflict } = fixture(t);
   const literal = '--settings=' + JSON.stringify(conflict);
-  for (const flag of ['--append-system-prompt', '--system-prompt', '--append-system-prompt-file', '--system-prompt-file', '--model']) {
+  const flags = `--debug-file --output-format --json-schema --input-format --thinking --thinking-display
+    --max-thinking-tokens --max-turns --max-budget-usd --task-budget --permission-prompt-tool --permission-prompts
+    --system-prompt --system-prompt-file --append-system-prompt --append-system-prompt-file --system-prompt-snapshot
+    --append-subagent-system-prompt --append-subagent-system-prompt-file --plan-mode-instructions --permission-mode
+    --inherit-permission-mode --watch-artifact --watch-artifact-no-autoreact --prefill --deep-link-repo --deep-link-last-fetch
+    --prefill-b64 --deep-link-cwd-b64 --resume-session-at --resume-drops-turn --rewind-files --model --effort --fast-mode
+    --agent --fallback-model --workload --client-data-url --session-id --name -n --agents --plugin-dir --plugin-dir-no-mcp
+    --plugin-url --advisor --autocompact --proactivity --messaging-socket-path --agent-id --agent-name --team-name --agent-color
+    --parent-session-id --teammate-mode --agent-type --sdk-url --forward-home-settings --attach-serve --environment --pool
+    --correlation-id --ref --on-branch --remote-control-session-name-prefix`.split(/\s+/);
+  for (const flag of flags) {
     options.args = [flag, literal];
     const before = [...options.args];
     assert.doesNotThrow(() => assertEndpointCompatible(options));
     assert.deepEqual(options.args, before);
     options.args = [flag, literal, '--settings', JSON.stringify(conflict)];
     assert.throws(() => assertEndpointCompatible(options), /conflicts/);
+  }
+});
+
+test('variadic and optional aliases preserve values and recognize following real flags', (t) => {
+  const { options, conflict } = fixture(t);
+  const literal = '--settings=' + JSON.stringify(conflict);
+  for (const flag of ['--allowedTools', '--allowed-tools', '--tools', '--disallowedTools', '--disallowed-tools',
+    '--mcp-config', '--betas', '--add-dir', '--file', '--channels', '--dangerously-load-development-channels']) {
+    options.args = [flag, literal];
+    assert.doesNotThrow(() => assertEndpointCompatible(options));
+    options.args = [flag, 'value', '--settings', JSON.stringify(conflict)];
+    assert.throws(() => assertEndpointCompatible(options), /conflicts/);
+  }
+  for (const flag of ['--debug', '-d', '--prompt-suggestions', '--resume', '-r', '--from-pr', '--worktree', '-w',
+    '--teleport', '--cloud', '--remote', '--remote-control', '--rc']) {
+    options.args = [flag, 'value', '--settings', JSON.stringify(conflict)];
+    assert.throws(() => assertEndpointCompatible(options), /conflicts/);
+  }
+});
+
+test('unsupported settings-root overrides fail clearly but literal occurrences remain values', (t) => {
+  const { options } = fixture(t);
+  for (const flag of ['--managed-settings', '--project-config-root']) {
+    for (const args of [[flag, 'private-value'], [flag + '=private-value']]) {
+      options.args = args;
+      assert.throws(() => assertEndpointCompatible(options), (error) => {
+        assert.match(error.message, /cannot be checked by Clauding/);
+        assert.equal(error.message.includes('private-value'), false);
+        return true;
+      });
+    }
+    options.args = ['--append-system-prompt', flag + '=private-value'];
+    assert.doesNotThrow(() => assertEndpointCompatible(options));
   }
 });
 

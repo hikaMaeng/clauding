@@ -15,6 +15,8 @@ On Windows, local settings also come from the working directory. On POSIX, Git i
 
 This preflight is a snapshot of local files. Claude Code also supports dynamic server-managed settings, registry or MDM policy, and runtime reloads. Those sources and changes after the check are outside the preflight. Claude Code remains responsible for its final settings resolution. [Settings sources](https://code.claude.com/docs/en/settings)
 
+The argument inspector recognizes the required, variadic, and optional-value options of Claude Code 2.1.306. Actual `--managed-settings` and `--project-config-root` host overrides change settings sources outside this preflight and are rejected before launch. The same text inside another option's literal value is preserved.
+
 ## Process shutdown
 
 Clauding forwards `SIGTERM`, `SIGHUP`, and non-interactive `SIGINT` to its Claude child and waits for the child to exit. After two seconds, it sends `SIGKILL` if shutdown has not finished. A second shutdown signal also requests immediate forced termination. Numeric child exit codes are preserved, and a signal exit uses `128 + signal number`.
