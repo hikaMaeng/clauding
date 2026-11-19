@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { homedir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 import { selectModel, validateConfig } from '../lib/models.js';
-import { assertEndpointCompatible, normalizeEndpoint } from '../lib/endpoint.js';
+import { assertEndpointCompatible } from '../lib/endpoint.js';
+import { makeEnvironment } from '../lib/environment.js';
 import { superviseChild } from '../lib/lifecycle.js';
 
 const configDir = join(homedir(), '.clauding');
@@ -71,38 +72,12 @@ function findClaude() {
   throw new Error('Claude Code was not found on PATH. Install it first: https://code.claude.com/docs/en/setup');
 }
 
-/** Apply launcher overrides only to the Claude Code subprocess. */
-function makeEnvironment(config) {
-  const settings = {
-    ANTHROPIC_BASE_URL: normalizeEndpoint(config.baseUrl),
-    ANTHROPIC_AUTH_TOKEN: config.authToken?.trim() || 'lmstudio',
-    ANTHROPIC_API_KEY: null,
-    ANTHROPIC_CUSTOM_HEADERS: null,
-    CLAUDE_CODE_OAUTH_TOKEN: null,
-    CLAUDE_CODE_USE_BEDROCK: null,
-    CLAUDE_CODE_USE_VERTEX: null,
-    CLAUDE_CODE_USE_FOUNDRY: null,
-    CLAUDE_CODE_ATTRIBUTION_HEADER: '0',
-    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
-  };
-  if (config.contextTokens != null) {
-    settings.CLAUDE_CODE_MAX_CONTEXT_TOKENS = String(config.contextTokens);
-  }
-  const env = { ...process.env };
-  for (const key of Object.keys(env)) {
-    if (Object.hasOwn(settings, isWindows ? key.toUpperCase() : key)) delete env[key];
-  }
-  for (const [key, value] of Object.entries(settings)) {
-    if (value != null) env[key] = value;
-  }
-  return env;
-}
-
 /** Start the CLI with the selected working directory and inherited terminal. */
 async function main(args) {
   if (args[0] === '--help' || args[0] === '-h') {
     console.log(`Usage: clauding [--select-model <index|model-id>] [folder] [--] [Claude Code options]
        clauding --init [base-url model-id]
+       clauding /vscode [--select-model <index|model-id> | --off]
 
 Config: ${configPath}
 Optional MCP config: ${mcpPath}
@@ -111,6 +86,11 @@ Claude Code help: clauding -- --help`);
   }
   if (args[0] === '--init') {
     initConfig(args.slice(1));
+    return;
+  }
+  if (args[0] === '/vscode') {
+    const { setupVSCode } = await import('../lib/vscode-setup.js');
+    await setupVSCode(args.slice(1));
     return;
   }
   let selector;

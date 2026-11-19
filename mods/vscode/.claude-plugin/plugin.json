@@ -1,0 +1,7 @@
+{
+  "name": "clauding",
+  "version": "0.4.0",
+  "description": "Switch the official Claude Code chat between its original connection and Clauding",
+  "author": { "name": "hikaMaeng" },
+  "license": "UNLICENSED"
+}

@@ -9,7 +9,7 @@ The config folder is `%USERPROFILE%\.clauding` on Windows and `$HOME/.clauding` 
 Install Node.js 22+, Git, and the official Claude Code CLI, then install Clauding:
 
 ```sh
-npm install --global "git+https://github.com/hikaMaeng/clauding.git#v0.3.0"
+npm install --global "git+https://github.com/hikaMaeng/clauding.git#main"
 clauding --help
 claude --version
 ```

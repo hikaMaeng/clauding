@@ -7,6 +7,8 @@
 | `clauding --select-model <index\|model-id> [folder]` | Select a configured model by its 1-based index or unique model ID. |
 | `clauding "<folder>" -- --version` | Forward Claude Code arguments for that folder. |
 | `clauding --init [base-url model-id]` | Create `~/.clauding/config.json` if absent. |
+| `clauding /vscode [--select-model <index\|model-id>]` | Add ON/OFF controls to the installed official VS Code extension. |
+| `clauding /vscode --off` | Restore the VS Code integration settings registered by Clauding. |
 | `clauding --help` | Show launcher help. |
 | `clauding -- --help` | Show Claude Code help. |
 

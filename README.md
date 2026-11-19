@@ -4,7 +4,7 @@ Run Claude Code against a local or self-hosted Anthropic-compatible Messages API
 
 **Your coding workflow, your model endpoint.**
 
-[한국어 안내](README.ko.md) · [Configuration reference](docs/api.md) · [Troubleshooting](docs/usage.md#troubleshooting)
+[한국어 안내](README.ko.md) · [VS Code setup](#use-the-official-vs-code-chat-panel) · [Configuration reference](docs/api.md) · [Troubleshooting](docs/usage.md#troubleshooting)
 
 Clauding starts your installed Claude Code with the endpoint and model you choose. Save the connection once, then type `clauding` in any project to start working with it. Keep several models or servers in one file, choose one at launch, and add MCP tools specifically for Clauding sessions.
 
@@ -22,6 +22,7 @@ clauding --select-model 2      # choose a saved connection directly
 | One editable JSON file | Set a server URL, model ID, optional token, and context window in `~/.clauding/config.json`. |
 | Several saved models and servers | Keep the same config objects in a `models` array; select from a menu or by index/model ID. |
 | Additional MCP tools | Load `~/.clauding/mcp.json` for Clauding sessions, alongside Claude Code's existing MCP configuration. |
+| Official VS Code chat integration | Run `clauding /vscode` to add Clauding ON/OFF controls inside the installed Anthropic extension, including use without an Anthropic login. |
 | Your existing Claude Code workflow | Continue using its terminal UI, project instructions, installed skills, tools, and permission controls under their normal loading rules. |
 | A check for conflicting endpoints | Stop before launching when an inspected environment variable or local settings file points to a different server. |
 | Child-scoped connection settings | Apply API credentials and connection overrides to the Claude Code child without rewriting your shell profile or Claude settings. |
@@ -34,7 +35,7 @@ For example, use a model served on your workstation for one project and a model 
 You need:
 
 1. **Node.js 22 or newer** and npm.
-2. **The official [Claude Code CLI](https://code.claude.com/docs/en/setup)** installed and available as `claude` on PATH. Check with `claude --version`.
+2. **Claude Code for the interface you use.** The terminal launcher needs the official CLI on PATH. Check it with `claude --version`. The VS Code chat integration uses the executable bundled with the official extension. [Claude Code CLI setup](https://code.claude.com/docs/en/setup)
 3. **A running Anthropic-compatible Messages API**, such as [LM Studio](https://lmstudio.ai/docs/integrations/claude-code) or a compatible gateway, with a model loaded.
 4. **Git access to this repository** for the installation command below.
 
@@ -45,7 +46,7 @@ The server must accept `POST /v1/messages`. An endpoint that only implements Ope
 ### 1. Install the launcher
 
 ```sh
-npm install --global "git+https://github.com/hikaMaeng/clauding.git#v0.3.0"
+npm install --global "git+https://github.com/hikaMaeng/clauding.git#main"
 clauding --help
 ```
 
@@ -154,6 +155,92 @@ Start Clauding and run `/mcp` to inspect the connection. This example requires t
 
 The extra file is used by Clauding launches; ordinary `claude` launches do not load it through this launcher. Existing Claude Code user/project MCP settings still apply. See [MCP setup and isolation](docs/usage.md#add-mcp-tools) if you want to use only the supplied MCP file.
 
+## Use the official VS Code chat panel
+
+Clauding adds a connection control to Anthropic's graphical Claude Code chat. The same chat can send requests through your original Claude connection or through the Messages API you configure. The packaged Claude Code Mod runs inside the official extension.
+
+### 1. Install the extension and launcher
+
+1. Open **Extensions** in VS Code and install **Claude Code for VS Code** by **Anthropic**, extension ID `anthropic.claude-code`. Use a local VS Code window with the default profile. The integration was exercised on Windows with extension version `2.1.327`. [Official Marketplace listing](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)
+2. Install or update Clauding from this repository using Node.js 22 or newer. Keep the launcher installed while the integration is registered.
+
+   ```sh
+   npm install --global "git+https://github.com/hikaMaeng/clauding.git#main"
+   clauding --help
+   ```
+
+   The help output should list `/vscode`. On Windows, registration uses the existing .NET Framework C# compiler to build the launch adapter.
+
+### 2. Configure the model connection
+
+Start your model server and load the model. In a terminal, create your Clauding configuration with the server's base URL and exact model ID:
+
+```sh
+clauding --init http://127.0.0.1:1234 my-local-model
+```
+
+Use the URL prefix before `/v1/messages`. For example, if the Messages endpoint is `http://127.0.0.1:1234/v1/messages`, enter `http://127.0.0.1:1234`. Replace `my-local-model` with the ID your server serves. The integrated chat uses the same [single-model configuration](#configure-a-model) or [models array](#choose-between-models-or-servers) as the terminal launcher.
+
+`--init` creates `~/.clauding/config.json` when it is absent. On Windows, edit `%USERPROFILE%\.clauding\config.json` if you already have a configuration. Set `authToken` if the server requires a Bearer token and match `contextTokens` to the server's deployed window.
+
+### 3. Register the integration
+
+Run this once from a regular terminal or VS Code's integrated terminal:
+
+```sh
+clauding /vscode
+```
+
+The command prints the selected model, VS Code settings path, and backup directory. It registers `claudeCode.claudeProcessWrapper` and `claudeCode.disableLoginPrompt` in the default profile's user settings. On Windows that file is `%APPDATA%\Code\User\settings.json`. Backups are in `~/.clauding/vscode/backups/`. [Official extension settings](https://code.claude.com/docs/en/vs-code#extension-settings)
+
+Open the Command Palette and run **Developer: Reload Window**, then open Claude Code from the Activity Bar and start a **new** chat. If the extension opens a terminal, turn off **Claude Code: Use Terminal** in VS Code Settings to use the graphical panel.
+
+### 4. Choose the connection and send a test prompt
+
+Look for the **Clauding** control above the prompt box. Its label shows the current mode. Click it between replies or type the corresponding slash command in the official chat.
+
+| Mode | Where the next model request goes |
+| --- | --- |
+| **Clauding OFF** | The original Claude connection, using the extension's Claude model selection. A signed-in Claude session starts in this mode. |
+| **Clauding ON** | The URL, token, model ID, and optional context size in the selected Clauding entry. When the launcher detects a signed-out session, Clauding starts in this mode. |
+
+`/clauding` opens the control. `/clauding on` and `/clauding off` change the mode without calling the model. In **ON** mode, read the model ID beside the Clauding control. That ID determines the target even if the extension's own model menu shows a Claude model.
+
+With **Clauding ON**, send `Reply with exactly VSCODE_CLAUDING_OK.` and confirm the reply. If your server exposes a request log, check that it received a Messages request for the selected model. You can switch back to **OFF** after the reply when your original connection is available.
+
+Switching applies to the next request in the same conversation and can send earlier chat context to the selected server. Start a separate chat when you want to keep the histories separate. The extension's project permissions still apply. If present, `~/.clauding/mcp.json` is loaded when the chat process starts and its tools are available in both modes.
+
+### 5. Choose another model or update the connection
+
+With several model entries, use the **Clauding model** selector in the chat. The first entry is the initial selection unless you have saved another one. Set the default for new chats by index or by unique model ID:
+
+```sh
+clauding /vscode --select-model 2
+clauding /vscode --select-model my-local-model
+```
+
+Indices start at 1. The default is saved as `modelSelector` in `~/.clauding/vscode.json`. To change the server, token, model ID, or context size, edit `config.json` and open a new chat. The runtime also rereads the model configuration when you turn Clauding ON. If a saved model no longer exists, register again with a valid selection.
+
+### Troubleshoot VS Code setup
+
+| Symptom | What to check |
+| --- | --- |
+| `/vscode` is treated as a folder or missing from help | Update Clauding. In Windows PowerShell, run `Get-Command clauding -All` to see whether an older script is taking precedence over the npm launcher. |
+| Setup rejects VS Code's `settings.json` | Automatic registration currently requires strict JSON. Remove comments and trailing commas from the user settings file after saving a copy, then retry. |
+| The toggle is missing | Check the official extension and the default local profile. Turn off **Claude Code: Use Terminal**, reload the window, open a new chat, and try `/clauding`. Extension or organization policy can restrict Mods. |
+| Sign-in is offered, or the account check times out | If offered, choose **Continue without Signing In**, then open a new chat and check that Clauding is ON. If the panel reports an unresolved account check, select **Clauding ON** manually. Verify that the active profile has the two settings printed by setup. |
+| Clauding is ON and the prompt fails | Check that the server is running and reachable from the VS Code host, its `POST /v1/messages` route accepts your token, and it serves the exact model ID in the control. |
+
+Use the default desktop VS Code profile for automatic registration. Other profiles, portable installations, Cursor, and remote extension hosts are outside this setup command's scope.
+
+### Remove the integration
+
+```sh
+clauding /vscode --off
+```
+
+This restores the previous values of the two registered VS Code settings. If you changed either setting after registration, the command reports the conflict so you can use the backup. Reload the VS Code window after removal. Use the chat's **OFF** button for a temporary switch. [Integration details and restoration](docs/vscode.md)
+
 ## Use Claude Code options
 
 Place the folder first, then `--` and the Claude Code arguments. For a single prompt without an interactive chat:
@@ -171,6 +258,8 @@ A bare initial argument is treated as a folder, so use `-p` for a prompt. Permis
 | `clauding --init [base-url model-id]` | Create a configuration if it is absent. |
 | `clauding [folder]` | Start an interactive coding session. |
 | `clauding --select-model <index\|model-id> [folder]` | Pick a saved connection before starting. |
+| `clauding /vscode [--select-model <index\|model-id>]` | Register the official VS Code chat integration and optionally save its initial model. |
+| `clauding /vscode --off` | Unregister the VS Code integration. |
 | `clauding --help` | Show launcher help. |
 | `clauding -- --help` | Show Claude Code help. |
 | `clauding -- --version` | Check the Claude Code installation resolved by the launcher. |
@@ -197,6 +286,7 @@ For connection errors, MCP failures, context warnings, and old Windows launcher 
 | --- | --- |
 | Understand the purpose and responsibilities | [Overview](docs/overview.md) |
 | Install, configure, and troubleshoot | [Usage](docs/usage.md) |
+| Configure the official VS Code chat integration | [VS Code](docs/vscode.md) |
 | Look up CLI and configuration keys | [API](docs/api.md) |
 | Understand the launch path | [Architecture](docs/architecture.md) |
 | Check provider and platform constraints | [Constraints](docs/constraints.md) |
